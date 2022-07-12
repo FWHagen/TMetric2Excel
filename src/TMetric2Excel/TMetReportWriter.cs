@@ -52,13 +52,9 @@ namespace TMetric2Excel
             // creating new WorkBook within Excel application  
             Microsoft.Office.Interop.Excel._Workbook workbook = app.Workbooks.Add(Type.Missing);
             // creating new Excelsheet in workbook  
-            Microsoft.Office.Interop.Excel._Worksheet worksheet = null;
+            Microsoft.Office.Interop.Excel._Worksheet worksheet = workbook.ActiveSheet;
             // see the excel sheet behind the program  
             app.Visible = showExcel;
-            // get the reference of first sheet. By default its name is Sheet1.  
-            // store its reference to worksheet  
-            worksheet = workbook.Sheets["Sheet1"];
-            worksheet = workbook.ActiveSheet;
             // changing the name of active sheet  
             worksheet.Name = start.ToIsoDate().Substring(0, 6);
 
@@ -95,7 +91,7 @@ namespace TMetric2Excel
             while (start.Month == mnth)
             {
                 row = start.Day + 1;
-                excel.Cells[row, col] = projectEntries.Where(tm => tm.Date() == start).Sum(tm => tm.Duration.ToRealOrZero());
+                excel.Cells[row, col] = projectEntries.Where(tm => tm.Date() == start).Sum(tm => tm.Duration?.ToRealOrZero());
 
                 start = start.AddDays(1);
             }

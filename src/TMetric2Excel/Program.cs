@@ -3,7 +3,7 @@ using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.CommandLine.IO;
 
-namespace TMetric2Excel // Note: actual namespace depends on the project name.
+namespace TMetric2Excel 
 {
     internal class Program : Runtime
     {
@@ -42,61 +42,68 @@ namespace TMetric2Excel // Note: actual namespace depends on the project name.
             },
                 fileOption, monthsOption, dirOption, outputOption);
 
-            return rootCommand.InvokeAsync(args).Result;
+            return await rootCommand.InvokeAsync(args);
         }
 
-        private static async Task RunProcess(FileInfo inputfile, int months, bool builddirs, string outputpath)
+        private static async Task RunProcess(FileInfo inputfile, int months, bool builddirs, string? outputpath)
         {
-            if (System.Diagnostics.Debugger.IsAttached)
+
+            await Task.Run(() =>
             {
-                if(inputfile == null || !inputfile.Exists)
-                    inputfile = new FileInfo(@"..\..\..\..\..\tests\detailed_report_20220501_20220531.csv");
+                if (System.Diagnostics.Debugger.IsAttached)
+                {
+                    if (inputfile == null || !inputfile.Exists)
+                        inputfile = new FileInfo(@"..\..\..\..\..\tests\detailed_report_20220501_20220531.csv");
+
+                    if (String.IsNullOrWhiteSpace(outputpath) && !String.IsNullOrEmpty(inputfile.DirectoryName))
+                        outputpath = inputfile.DirectoryName;
+                }
+
+                var assem = System.Reflection.Assembly.GetExecutingAssembly();
+                Printf($"TMetric2Excel v{assem.GetName().Version}");
+                Printf($"".PadRight(30, '-'));
+                string tMetDetailedReportFile = FindFileFromArgs(inputfile, months);
+                Printf($"".PadRight(60, '-'));
 
                 if (String.IsNullOrWhiteSpace(outputpath))
-                    outputpath = inputfile.DirectoryName;
-            }
+                    outputpath = Environment.CurrentDirectory;
 
-            var assem = System.Reflection.Assembly.GetExecutingAssembly();
-            Printf($"TMetric2Excel v{assem.GetName().Version}");
-            Printf($"".PadRight(30, '-'));
-            string tMetDetailedReportFile = FindFileFromArgs(inputfile, months);
-            Printf($"".PadRight(60, '-'));
-
-            if (String.IsNullOrWhiteSpace(outputpath))
-                outputpath = Environment.CurrentDirectory;
-
-            var data = new TMetCsvParser().ParseFile(tMetDetailedReportFile);
-            if (data != null)
-            {
-                Log($"{data.Count} records retrieved");
-
-                if(builddirs)
+                var data = new TMetCsvParser().ParseFile(tMetDetailedReportFile);
+                if (data != null)
                 {
-                    var bdoutputpath = Path.Combine(outputpath,data.First().Date().ToString("yyyyMM"));
-                    if (!Directory.Exists(bdoutputpath))
+                    Log($"{data.Count} records retrieved");
+
+                    if (builddirs)
                     {
-                        try
+                        var bdoutputpath = Path.Combine(outputpath, data.First().Date().ToString("yyyyMM"));
+                        if (!Directory.Exists(bdoutputpath))
                         {
-                            Directory.CreateDirectory(bdoutputpath);
-                            Log($"Created Directory: {(new FileInfo(bdoutputpath)).FullName}");
+                            try
+                            {
+                                Directory.CreateDirectory(bdoutputpath);
+                                Log($"Created Directory: {(new FileInfo(bdoutputpath)).FullName}");
+                            }
+                            catch (Exception ex)
+                            {
+                                bdoutputpath = outputpath;
+                                LogError($"Could not create output directory [{bdoutputpath}]:");
+                                LogError(ex.Message);
+                            }
                         }
-                        catch (Exception ex)
+                        outputpath = bdoutputpath;
+                    }
+
+                    var clients = data.Select(tm => tm.Client).Distinct().OrderBy(tm => tm);
+                    foreach (var item in clients)
+                    {
+                        if (item != null)
                         {
-                            bdoutputpath = outputpath;
-                            LogError($"Could not create output directory [{bdoutputpath}]:");
-                            LogError(ex.Message);
+                            Log($"Processing report for {item}");
+                            ProcessClient(item, data.Where(tm => tm.Client == item), outputpath);
                         }
                     }
-                    outputpath = bdoutputpath;
                 }
-
-                var clients = data.Select(tm => tm.Client).Distinct().OrderBy(tm => tm);
-                foreach (var item in clients)
-                {
-                    Log($"Processing report for {item}");
-                    ProcessClient(item, data.Where(tm => tm.Client == item), outputpath);
-                }
-            }
+            });
         }
 
         private static void ProcessClient(string item, IEnumerable<TMetReportRecord> records, string outputpath = "")

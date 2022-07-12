@@ -15,11 +15,11 @@ namespace TMetric2Excel
         {
 
             List<string> list = new List<string>();
-            string curr = null;
+            string curr = String.Empty;
             foreach (Match match in csvSplit.Matches(input))
             {
                 curr = match.Value;
-                if (0 == curr.Length)
+                if (curr.Length == 0)
                 {
                     list.Add("");
                 }
@@ -35,7 +35,7 @@ namespace TMetric2Excel
             if (!fileInfo.Exists)
             {
                 LogError($"File not found: {tMetDetailedReportFile}");
-                return null;
+                return default;
             }
 
             List<TMetReportRecord> results =new List<TMetReportRecord> ();

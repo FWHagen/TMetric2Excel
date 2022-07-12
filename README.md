@@ -16,6 +16,7 @@ This utility will group all TMetric time entries by client and generate totals g
 
 
 ### Usage:
+```
   TMetric2Excel [options]
 
 ```
