@@ -16,6 +16,7 @@ This utility will group all TMetric time entries by client and generate totals g
 
 
 ### Usage:
+```
   TMetric2Excel [options]
 
 Options:
@@ -25,11 +26,13 @@ Options:
   -o, --output-path <output-path>  File directory path where reports will be created.
   --version                        Show version information
   -?, -h, --help                   Show help and usage information
+```
 
 ### Prerequisites
-
-TMetric account
-All time entries must have a project assigned
+- .NET 6.0 runtime 
+  - [https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.6-windows-x64-installer](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.6-windows-x64-installer)
+- [TMetric](https://app.tmetric.com/) account
+- All time entries must have a project assigned
 It is assumed that the entries are one calendar month of data
 
 

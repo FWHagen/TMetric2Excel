@@ -6,6 +6,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TMetric2Excel", "src\TMetri
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5CD05523-6C50-4467-A0C4-262627B795EA}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		tests\detailed_report_20220501_20220531.csv = tests\detailed_report_20220501_20220531.csv
 	EndProjectSection
 EndProject
