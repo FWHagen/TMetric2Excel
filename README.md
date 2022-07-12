@@ -19,7 +19,6 @@ This utility will group all TMetric time entries by client and generate totals g
 ```
   TMetric2Excel [options]
 
-```
 Options:
   -i, --input-file <input-file>    The input file (will override --months-ago).
   -m, --months-ago <months-ago>    Month to process prior to current month. [default: 1]
