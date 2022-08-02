@@ -7,9 +7,11 @@ namespace TMetric2Excel
 {
     internal class Program : Runtime
     {
+        private static ConfigurationService ConfigSvc;
 
         static async Task<int> Main(string[] args)
         {
+            ConfigSvc = new ConfigurationService();
 
             var fileOption = new Option<FileInfo?>(
                 name: "--input-file",
@@ -50,14 +52,14 @@ namespace TMetric2Excel
 
             await Task.Run(() =>
             {
-                if (System.Diagnostics.Debugger.IsAttached)
-                {
-                    if (inputfile == null || !inputfile.Exists)
-                        inputfile = new FileInfo(@"..\..\..\..\..\tests\detailed_report_20220501_20220531.csv");
+                //if (System.Diagnostics.Debugger.IsAttached)
+                //{
+                //    if (inputfile == null || !inputfile.Exists)
+                //        inputfile = new FileInfo(@"..\..\..\..\..\tests\detailed_report_20220501_20220531.csv");
 
-                    if (String.IsNullOrWhiteSpace(outputpath) && !String.IsNullOrEmpty(inputfile.DirectoryName))
-                        outputpath = inputfile.DirectoryName;
-                }
+                //    if (String.IsNullOrWhiteSpace(outputpath) && !String.IsNullOrEmpty(inputfile.DirectoryName))
+                //        outputpath = inputfile.DirectoryName;
+                //}
 
                 var assem = System.Reflection.Assembly.GetExecutingAssembly();
                 Printf($"TMetric2Excel v{assem.GetName().Version}");
@@ -66,7 +68,13 @@ namespace TMetric2Excel
                 Printf($"".PadRight(60, '-'));
 
                 if (String.IsNullOrWhiteSpace(outputpath))
-                    outputpath = Environment.CurrentDirectory;
+                {
+                    outputpath = AppDomain.CurrentDomain.BaseDirectory;
+                    if (System.Diagnostics.Debugger.IsAttached)
+                        outputpath = (new FileInfo(tMetDetailedReportFile)).DirectoryName;
+                }
+
+                var cfgs = ConfigSvc.ParseConfigFile();
 
                 var data = new TMetCsvParser().ParseFile(tMetDetailedReportFile);
                 if (data != null)
@@ -108,31 +116,59 @@ namespace TMetric2Excel
 
         private static void ProcessClient(string item, IEnumerable<TMetReportRecord> records, string outputpath = "")
         {
-            var tmrw = new TMetReportWriter();
+            var tmrw = new TMetReportWriter() { ConfigSvc = ConfigSvc };
             tmrw.CreateReport(item, records, outputpath);
         }
 
         private static string FindFileFromArgs(FileInfo inputfile, int months)
         {
-            if(inputfile != null && inputfile.Exists)
+            if (inputfile != null && inputfile.Exists)
             {
                 Log($"- Using input file {inputfile.Name}");
                 return inputfile.FullName;
             }
 
-            int monthoffset = 0-months;
-            if(months == 0 && DateTime.Today.Day > 20)
+            int monthoffset = 0 - months;
+            if (months == 0 && DateTime.Today.Day > 20)
                 monthoffset++;
 
-                DateTime start = DateTime.Today;
-                start = start.AddDays(1 - start.Day);
-                start = start.AddMonths(monthoffset); 
-                DateTime end = start.AddMonths(1).AddDays(-1);
-                Log($"Locating TMetric Detailed Report for {start:MMM} {start:yyyy}:");
-                string _tMetDetailedReportFile = $"detailed_report_{start.ToIsoDate()}_{end.ToIsoDate()}.csv";
+            DateTime start = DateTime.Today;
+            start = start.AddDays(1 - start.Day);
+            start = start.AddMonths(monthoffset);
+            DateTime end = start.AddMonths(1).AddDays(-1);
+            Log($"Locating TMetric Detailed Report for {start:MMM} {start:yyyy}:");
+            string _tMetDetailedReportFile = $"detailed_report_{start.ToIsoDate()}_{end.ToIsoDate()}.csv";
 
             if (File.Exists(_tMetDetailedReportFile))
+            {
                 Log($"- Discovered file at {(new FileInfo(_tMetDetailedReportFile)).FullName}");
+                return _tMetDetailedReportFile;
+            }
+
+            string[] possiblelocs = new string[] {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Timekeeping", _tMetDetailedReportFile),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "TMetric2Excel", _tMetDetailedReportFile),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "TMetric", _tMetDetailedReportFile),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Timekeeping", _tMetDetailedReportFile),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "TMetric2Excel", _tMetDetailedReportFile),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "TMetric", _tMetDetailedReportFile)
+                };
+
+            foreach (var loca in possiblelocs)
+            {
+                if (File.Exists(loca))
+                {
+                    _tMetDetailedReportFile = loca;
+                    Log($"- Discovered file at {(new FileInfo(_tMetDetailedReportFile)).FullName}");
+                    return _tMetDetailedReportFile;
+                }
+
+            }
+
+            // For testing //
+            _tMetDetailedReportFile = new FileInfo(@"..\..\..\..\..\tests\detailed_report_20220501_20220531.csv").FullName;
+            Log($"- Using TEST file at {(new FileInfo(_tMetDetailedReportFile)).FullName}");
+
             return _tMetDetailedReportFile;
         }
 

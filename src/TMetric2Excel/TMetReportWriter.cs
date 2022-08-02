@@ -9,6 +9,8 @@ namespace TMetric2Excel
 {
     internal class TMetReportWriter : Runtime
     {
+        public ConfigurationService ConfigSvc { get; internal set; }
+
         internal void CreateReport(string item, IEnumerable<TMetReportRecord> records, string outputpath, bool showExcel = false)
         {
             Printf(item);
@@ -31,7 +33,7 @@ namespace TMetric2Excel
                 summaryrow = WriteSummaries(excel.ActiveSheet, projentries.First().Project, projentries, summaryrow);
             }
             Printf("-------------------------------------------------");
-            TotalRows(excel.ActiveSheet, projectCol++, records.First().Date());
+            TotalRows(excel.ActiveSheet, records.First().Client, projectCol++, records.First().Date(), records);
 
             string filename = String.Concat(item.Replace(" ","_"), "-", records.First().Date().ToIsoDate().Substring(0,6), ".xlsx");
             if(!String.IsNullOrWhiteSpace(filename))
@@ -118,7 +120,7 @@ namespace TMetric2Excel
             return ++summaryrow;
         }
 
-        private void TotalRows(_Worksheet excel, int col, DateTime start)
+        private void TotalRows(_Worksheet excel, string client, int col, DateTime start, IEnumerable<TMetReportRecord> records)
         {
             if (start.Day > 1)
                 start = start.AddDays(1 - start.Day);
@@ -127,7 +129,10 @@ namespace TMetric2Excel
             excel.Cells.Item[1, col].Font.Bold = true;
             DrawBorderUnder(excel, 1, 1, 1, col);
 
-
+            bool isWeShaded = GetIsShaded(client,"Weekend");
+            bool isHolShaded = GetIsShaded(client, "Holiday");
+            bool isPtoShaded = GetIsShaded(client, "PTO");
+            bool isSdayShaded = GetIsShaded(client, "SickDay");
             int mnth = start.Month;
             int row = start.Day + 1;
             while (start.Month == mnth)
@@ -138,12 +143,58 @@ namespace TMetric2Excel
                 string ecel = (char)(col + 64-1) + row.ToString();
                 excel.Cells.Item[row, col] = $"=SUM({fcel}:{ecel})";
 
-                if (start.DayOfWeek == DayOfWeek.Sunday || start.DayOfWeek == DayOfWeek.Saturday)
+                fcel = "A" + row;
+                ecel = (char)(col + 0 + 64) + row.ToString();  // Change 0 to number columns right of Total desired to shade
+                
+                if (isWeShaded && (start.DayOfWeek == DayOfWeek.Sunday || start.DayOfWeek == DayOfWeek.Saturday))
+                    excel.Range[fcel, ecel].Interior.ColorIndex = GetShaderColor(client, "WeekendColorIndex", 15);
+
+                ecel = (char)(col + 2 + 64) + row.ToString();  // Change 0 to number columns right of Total desired to shade
+
+                if (isSdayShaded && records != null &&
+                    (records.Any(re => re.Date() == start && (re.TimeEntry == "Sick" ||
+                                                                re.TimeEntry == "SickDay" ||
+                                                                re.TimeEntry == "Sick Day" ||
+                                                                re.TimeEntry == "Flex Day" ||
+                                                                re.Tags.Contains("Flex") ||
+                                                                re.Tags.Contains("Sick")))))
                 {
-                    fcel = "A" + row;
-                    ecel = (char)(col + 0 + 64) + row.ToString();  // Change 0 to number columns right of Total desired to shade
-                    excel.Range[fcel, ecel].Interior.ColorIndex = 15;
+                    excel.Range[fcel, ecel].Interior.ColorIndex = GetShaderColor(client, "SickDayColorIndex", 20);
+                    var item = (records.Last(re => re.Date() == start && (re.TimeEntry == "Sick" ||
+                                                                re.TimeEntry == "SickDay" ||
+                                                                re.TimeEntry == "Sick Day" ||
+                                                                re.TimeEntry == "Flex Day" ||
+                                                                re.Tags.Contains("Flex") ||
+                                                                re.Tags.Contains("Sick"))));
+                    excel.Cells.Item[row, col+2] = item.TimeEntry;
                 }
+
+                if (isPtoShaded && records != null &&
+                    (records.Any(re => re.Date() == start && (re.TimeEntry == "PTO" ||
+                                                                re.TimeEntry == "Day Off" ||
+                                                                re.TimeEntry == "Vacation" ||
+                                                                re.TimeEntry == "Vacation Day" ||
+                                                                re.Tags.Contains("Vacation") ||
+                                                                re.Tags.Contains("PTO")))))
+                {
+                    excel.Range[fcel, ecel].Interior.ColorIndex = GetShaderColor(client, "PTOColorIndex", 20);
+                    var item = (records.Last(re => re.Date() == start && (re.TimeEntry == "PTO" ||
+                                                                re.TimeEntry == "Day Off" ||
+                                                                re.TimeEntry == "Vacation" ||
+                                                                re.TimeEntry == "Vacation Day" ||
+                                                                re.Tags.Contains("Vacation") ||
+                                                                re.Tags.Contains("PTO"))));
+                    excel.Cells.Item[row, col + 2] = item.TimeEntry;
+                }
+
+                if (isHolShaded && records != null &&
+                    (records.Any(re => re.Date() == start && (re.TimeEntry == "Holiday" || re.Tags.Contains("Holiday")))))
+                {
+                    excel.Range[fcel, ecel].Interior.ColorIndex = GetShaderColor(client, "HolidayColorIndex", 20);
+                    var item = (records.Last(re => re.Date() == start && (re.TimeEntry == "Holiday" || re.Tags.Contains("Holiday"))));
+                    excel.Cells.Item[row, col + 2] = item.TimeEntry;
+                }
+
                 start = start.AddDays(1);
             }
             DrawBorderUnder(excel, row, 1, row, col);
@@ -153,6 +204,34 @@ namespace TMetric2Excel
             string tecel = (char)(col + 64) + row.ToString();
             excel.Cells.Item[row + 1, col] = $"=SUM({tfcel}:{tecel})";
             excel.Cells.Item[row + 1, col].Font.Bold = true;
+        }
+
+        private bool GetIsShaded(string client, string linetype = "Weekend")
+        {
+            var csh = ConfigSvc.GetConfig(client, $"Shade{linetype}");
+            if(csh != null)
+            {
+                return (bool)csh;
+            }
+
+            var ash = ConfigSvc.GetConfig($"Shade{linetype}");
+            if (ash != null)
+            {
+                return (bool)ash;
+            }
+
+            return true;
+        }
+
+        private int GetShaderColor(string clientname, string shadername, int defaultvalue)
+        {
+            var cnamcfg = ConfigSvc.GetConfig(clientname, shadername);
+            if (cnamcfg != null)
+                return (int)cnamcfg;
+            var cfg = ConfigSvc.GetConfig(shadername);
+            if (cfg != null)
+                return (int)cfg;
+            return defaultvalue;
         }
 
         private void DrawBorderUnder(_Worksheet excel, int beginCellRow, int beginCellCol, int endCellRow = 0, int endCellCol = 0, int colorindex = 1)
