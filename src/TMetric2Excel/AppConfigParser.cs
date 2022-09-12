@@ -9,9 +9,10 @@
             if (!File.Exists(configfile))
                 return null;
 
+            Console.WriteLine($"Loading configuration from {configfile}");
             var currentSection = "Application";
-
-            foreach (var rawLine in File.ReadAllLines(configfile))
+            var alllines = File.ReadAllLines(configfile);
+            foreach (var rawLine in alllines)
             {
                 var line = rawLine.Trim();
                 if (line.IsEmpty())

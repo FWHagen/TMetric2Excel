@@ -64,6 +64,7 @@ namespace TMetric2Excel
                 var assem = System.Reflection.Assembly.GetExecutingAssembly();
                 Printf($"TMetric2Excel v{assem.GetName().Version}");
                 Printf($"".PadRight(30, '-'));
+                var cfgs = ConfigSvc.ParseConfigFile();
                 string tMetDetailedReportFile = FindFileFromArgs(inputfile, months);
                 Printf($"".PadRight(60, '-'));
 
@@ -73,8 +74,6 @@ namespace TMetric2Excel
                     if (System.Diagnostics.Debugger.IsAttached)
                         outputpath = (new FileInfo(tMetDetailedReportFile)).DirectoryName;
                 }
-
-                var cfgs = ConfigSvc.ParseConfigFile();
 
                 var data = new TMetCsvParser().ParseFile(tMetDetailedReportFile);
                 if (data != null)

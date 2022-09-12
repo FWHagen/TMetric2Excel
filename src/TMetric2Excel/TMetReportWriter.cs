@@ -21,6 +21,12 @@ namespace TMetric2Excel
             var excel = CreateReportFile(app, item, records.First().Date());
             Printf($"  {records.Count():000} records found for {item}");
 
+            var companyConfigs = ConfigSvc.Configs.Where(cc => cc.Section == item);
+            bool roundInt = ConfigIsTrue(companyConfigs, "RoundUpToWholeHour"); 
+
+            if(roundInt)
+                records = RoundUp(records);
+
             int summaryrow = 35;
             int projectCol = 2;
             var projects = records.Select(tm => tm.ProjectCode).Distinct().OrderBy(tm => tm);
@@ -47,6 +53,43 @@ namespace TMetric2Excel
             // Close application and release resources
             app.Quit();
             Printf("=================================================\n");
+        }
+
+        private IEnumerable<TMetReportRecord> RoundUp(IEnumerable<TMetReportRecord> records)
+        {
+            if (records == null)
+                return records;
+            foreach (var rec in records)
+            {
+                if (rec.Duration.IsNotEmpty())
+                {
+                    double duration = 0.0;
+                    double billable = 0.0;
+                    double rate = 0.0;
+                    if (double.TryParse(rec.Duration, out duration) && duration > 0)
+                    {
+                        double.TryParse(rec.BillableAmount, out billable);
+                        if (duration > 0)
+                            rate = billable / duration;
+                        duration = Math.Ceiling(duration);
+                        rec.Duration = duration.ToString("0.0");
+                        rec.BillableAmount = (duration * rate).ToString("0.00");
+                    }
+                }
+            }
+            return records;
+        }
+
+        private bool ConfigIsTrue(IEnumerable<Configuration> companyConfigs, string key)
+        {
+            if(companyConfigs != null && companyConfigs.Any(cc => cc.Name == key))
+            {
+                var config = companyConfigs.LastOrDefault(cc => cc.Name == key);
+                if (config.Value.ToString().IsNotEmpty())
+                    return config.Value.ToString().ToPessimisticBool();
+            }
+
+            return false;
         }
 
         private _Workbook CreateReportFile(_Application app, string item, DateTime start, bool showExcel = false)
@@ -211,13 +254,13 @@ namespace TMetric2Excel
             var csh = ConfigSvc.GetConfig(client, $"Shade{linetype}");
             if(csh != null)
             {
-                return (bool)csh;
+                return csh.ToString().ToOptimisticBool();
             }
 
             var ash = ConfigSvc.GetConfig($"Shade{linetype}");
             if (ash != null)
             {
-                return (bool)ash;
+                return ash.ToString().ToOptimisticBool();
             }
 
             return true;
@@ -227,10 +270,10 @@ namespace TMetric2Excel
         {
             var cnamcfg = ConfigSvc.GetConfig(clientname, shadername);
             if (cnamcfg != null)
-                return (int)cnamcfg;
+                return (int)cnamcfg.ToString().ToRealOrZero();
             var cfg = ConfigSvc.GetConfig(shadername);
             if (cfg != null)
-                return (int)cfg;
+                return (int)cfg.ToString().ToRealOrZero();
             return defaultvalue;
         }
 

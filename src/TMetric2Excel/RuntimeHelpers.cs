@@ -63,6 +63,28 @@ namespace TMetric2Excel
             return result;
         }
 
+        public static bool ToOptimisticBool(this string value)
+        {
+            if (String.IsNullOrWhiteSpace(value))
+                return true;
+            value = value.ToLower();
+            if (value == "f" || value == "false" || value == "n" || value == "no" || value == "0" || value == "off")
+                return false;
+            return true;
+        }
+        public static bool ToPessimisticBool(this string value)
+        {
+            if (String.IsNullOrWhiteSpace(value))
+                return false;
+            value = value.ToLower();
+            if (value == "t" || value == "true" || value == "y" || value == "yes" || value == "1" || value == "on")
+                return true;
+            return false;
+        }
+
+
+
+
         public static string ThisMethod([System.Runtime.CompilerServices.CallerMemberName] string remotemethod = "") { return remotemethod; }
 
 

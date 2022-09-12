@@ -11,7 +11,7 @@ namespace TMetric2Excel
         internal List<Configuration> ParseConfigFile(string configfile = "")
         {
             if (String.IsNullOrWhiteSpace(configfile))
-                configfile = "TMetric2Excel2.cfg";
+                configfile = "TMetric2Excel.cfg";
 
             if(!File.Exists(configfile))
             {
