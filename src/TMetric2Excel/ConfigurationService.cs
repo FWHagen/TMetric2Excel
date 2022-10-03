@@ -15,15 +15,7 @@ namespace TMetric2Excel
 
             if(!File.Exists(configfile))
             {
-                var adpath = Path.Combine(Environment.SpecialFolder.ApplicationData.ToString(), configfile);
-                var cdpath = Path.Combine(Environment.CurrentDirectory, configfile);
-                var bdpath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, configfile);
-                if (File.Exists(adpath))
-                    configfile = adpath;
-                if (File.Exists(cdpath))
-                    configfile = cdpath;
-                if (File.Exists(bdpath))
-                    configfile = bdpath;
+                configfile = FindConfigfile(configfile);
             }
 
             Configs = base.ParseConfigFile(configfile);
@@ -33,6 +25,23 @@ namespace TMetric2Excel
 
             SetDefaults();
             return Configs;
+        }
+
+        private string FindConfigfile(string configfile)
+        {
+            var adpath = Path.Combine(Environment.SpecialFolder.ApplicationData.ToString(), configfile);
+            if (File.Exists(adpath))
+                return adpath;
+
+            var cdpath = Path.Combine(Environment.CurrentDirectory, configfile);
+            if (File.Exists(cdpath))
+                return cdpath;
+
+            var bdpath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, configfile);
+            if (File.Exists(bdpath))
+                return bdpath;
+
+            return null;
         }
 
         private void SetDefaults()

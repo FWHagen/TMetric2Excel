@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ## Released
 
+## 0.4.0 / 2022-10-03
+
+### Added
+- Supported configuration "DoNotCountProjectHours" to be used in company section
+  - Multiple project (by Id - such as RCN-99) may be listed in comma-delimited list
+  - Output will show "*" for those projects during runtime
+  - Marked projects will appear in first columns, before all others
+  - Summation formula on Title column updated to exclude marked projects
+
+### Modified
+- Updated finding config file - will use the file found in the first location, not last
+- Order of config file location is executable directory, AppData\Remote, Current directory
+
+- - - - 
 ## 0.3.0 / 2022-09-12
 
 ### Added

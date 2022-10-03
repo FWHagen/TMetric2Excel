@@ -22,5 +22,8 @@ namespace TMetric2Excel
         public string? BillableAmount { get; set; }
         public string? BillableCurrency { get; set; }
 
+        public bool RoundToHour { get; set; } = false;
+        public bool RoundToMinute { get; set; } = false;
+        public bool NotInTotals { get; set; } = false;
     }
 }

@@ -22,16 +22,37 @@ namespace TMetric2Excel
             Printf($"  {records.Count():000} records found for {item}");
 
             var companyConfigs = ConfigSvc.Configs.Where(cc => cc.Section == item);
-            bool roundInt = ConfigIsTrue(companyConfigs, "RoundUpToWholeHour"); 
+            bool roundInt = ConfigIsTrue(companyConfigs, "RoundUpToWholeHour");
+            string[] notTallied = GetConfigValues(companyConfigs, "DoNotCountProjectHours");
 
             if(roundInt)
                 records = RoundUp(records);
+            if (notTallied != null && notTallied.Length > 0)
+                records = MarkRecordsNotTallied(records, notTallied);
 
             int summaryrow = 35;
             int projectCol = 2;
+            int skiptotal = 0;
+            if (notTallied != null && notTallied.Length > 0)
+            {
+                foreach (var proj in notTallied)
+                {
+                    var projentries = records.Where(tm => tm.ProjectCode == proj);
+                    if (projentries.Any())
+                    {
+                        skiptotal++;
+                        Printf($"  --- {proj,7} - {String.Concat(projentries.First().Project, " * ").PadRight(30, '-')}");
+
+                        TallyProject(excel.ActiveSheet, projentries.First().Project, projentries, projectCol++);
+                        summaryrow = WriteSummaries(excel.ActiveSheet, projentries.First().Project, projentries, summaryrow);
+                    }
+                }
+            }
             var projects = records.Select(tm => tm.ProjectCode).Distinct().OrderBy(tm => tm);
             foreach (var proj in projects)
             {
+                if (notTallied != null && notTallied.Length > 0 && notTallied.Contains(proj)) 
+                    continue;
                 var projentries = records.Where(tm => tm.ProjectCode == proj);
                 Printf($"  --- {proj,7} - {String.Concat(projentries.First().Project, " ").PadRight(30, '-')}");
 
@@ -39,7 +60,7 @@ namespace TMetric2Excel
                 summaryrow = WriteSummaries(excel.ActiveSheet, projentries.First().Project, projentries, summaryrow);
             }
             Printf("-------------------------------------------------");
-            TotalRows(excel.ActiveSheet, records.First().Client, projectCol++, records.First().Date(), records);
+            TotalRows(excel.ActiveSheet, records.First().Client, projectCol++, records.First().Date(), records, skiptotal);
 
             string filename = String.Concat(item.Replace(" ","_"), "-", records.First().Date().ToIsoDate().Substring(0,6), ".xlsx");
             if(!String.IsNullOrWhiteSpace(filename))
@@ -55,13 +76,29 @@ namespace TMetric2Excel
             Printf("=================================================\n");
         }
 
+        private IEnumerable<TMetReportRecord> MarkRecordsNotTallied(IEnumerable<TMetReportRecord> records, string[] notTallied)
+        {
+            foreach (var item in notTallied)
+            {
+                foreach (var record in records.Where(rr => rr.ProjectCode == item))
+                {
+                    record.NotInTotals = true;
+                }
+            }
+            return records;
+        }
+
         private IEnumerable<TMetReportRecord> RoundUp(IEnumerable<TMetReportRecord> records)
         {
             if (records == null)
                 return records;
             foreach (var rec in records)
             {
-                if (rec.Duration.IsNotEmpty())
+                if (rec.Duration.IsNotEmpty() && 
+                    !rec.Duration.EndsWith(".0") &&
+                    !rec.Duration.EndsWith(".00") &&
+                    !rec.Duration.EndsWith(".000") &&
+                    !rec.Duration.EndsWith(".0000") )
                 {
                     double duration = 0.0;
                     double billable = 0.0;
@@ -91,6 +128,16 @@ namespace TMetric2Excel
 
             return false;
         }
+        private string[] GetConfigValues(IEnumerable<Configuration> companyConfigs, string name)
+        {
+            var config = companyConfigs.FirstOrDefault(cc => cc.Name == name);
+            if (config != null)
+            {
+                return config.Value.ToString().Split(',');
+            }
+            return new List<string>().ToArray();
+        }
+
 
         private _Workbook CreateReportFile(_Application app, string item, DateTime start, bool showExcel = false)
         {
@@ -163,7 +210,7 @@ namespace TMetric2Excel
             return ++summaryrow;
         }
 
-        private void TotalRows(_Worksheet excel, string client, int col, DateTime start, IEnumerable<TMetReportRecord> records)
+        private void TotalRows(_Worksheet excel, string client, int col, DateTime start, IEnumerable<TMetReportRecord> records, int skipped = 0)
         {
             if (start.Day > 1)
                 start = start.AddDays(1 - start.Day);
@@ -182,7 +229,8 @@ namespace TMetric2Excel
             {
                 row = start.Day + 1;
 
-                string fcel = "B" + row.ToString();
+                char startcol = (char)(skipped + 64 + 2);  // 'B' + not tallied //
+                string fcel = startcol + row.ToString();
                 string ecel = (char)(col + 64-1) + row.ToString();
                 excel.Cells.Item[row, col] = $"=SUM({fcel}:{ecel})";
 

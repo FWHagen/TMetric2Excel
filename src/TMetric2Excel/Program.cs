@@ -150,7 +150,9 @@ namespace TMetric2Excel
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "TMetric", _tMetDetailedReportFile),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Timekeeping", _tMetDetailedReportFile),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "TMetric2Excel", _tMetDetailedReportFile),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "TMetric", _tMetDetailedReportFile)
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "TMetric", _tMetDetailedReportFile),
+
+                Path.Combine(@"..\..\..\..\..\tests\LiveData", _tMetDetailedReportFile)
                 };
 
             foreach (var loca in possiblelocs)
