@@ -150,8 +150,10 @@ namespace TMetric2Excel
             // changing the name of active sheet  
             worksheet.Name = start.ToIsoDate().Substring(0, 6);
 
-            worksheet.Cells[1, 1] = "Date";
-            worksheet.Cells.Item[1, 1].Font.Bold = true;
+            worksheet.WriteCellHeader("Date", 1, 1, 11.5);
+            //worksheet.Cells[1, 1] = "Date";
+            //worksheet.Cells.Item[1, 1].Font.Bold = true;
+            //worksheet.Columns["A:A"].ColumnWidth = 12.5;
 
             if (start.Day > 1)
                 start = start.AddDays(1 - start.Day);
@@ -161,10 +163,12 @@ namespace TMetric2Excel
             while (start.Month == mnth)
             {
                 row = start.Day + 1;
-                worksheet.Cells[row, 1] = start;
+                //worksheet.Cells[row, 1] = start;
+                worksheet.WriteCell(start, 1, row,1);
                 start = start.AddDays(1);
             }
-            worksheet.UsedRange.EntireColumn.AutoFit();
+            //worksheet.UsedRange.EntireColumn.AutoFit();
+            worksheet.UsedRange.IndentLevel = 0;
 
             return workbook;
         }
@@ -175,8 +179,9 @@ namespace TMetric2Excel
             if (start.Day > 1)
                 start = start.AddDays(1 - start.Day);
 
-            excel.Cells[1, col] = projectName;
-            excel.Cells.Item[1, col].Font.Bold = true;
+            excel.WriteCellHeader(projectName, col, 1, 16);
+            //excel.Cells[1, col] = projectName;
+            //excel.Cells.Item[1, col].Font.Bold = true;
 
             int mnth = start.Month;
             int row = start.Day + 1;
@@ -197,14 +202,18 @@ namespace TMetric2Excel
         private int WriteSummaries(_Worksheet excel, string projectName, IEnumerable<TMetReportRecord> projentries, int summaryrow)
         {
 
-            excel.Cells[summaryrow, 1] = projectName;
-            excel.Cells.Item[summaryrow++, 1].Font.Bold = true;
+            //excel.Cells[summaryrow, 1] = projectName;
+            //excel.Cells.Item[summaryrow++, 1].Font.Bold = true;
+            excel.WriteCellHeader(projectName, 1, summaryrow++);
 
             var tasks = projentries.Select(tm => tm.TimeEntry).Distinct();
             foreach (var task in tasks)
             {
                 Printf($"    {projentries.Where(tm => tm.TimeEntry == task).Sum(tm => tm.Duration.ToRealOrZero()):00} - {task}");
-                excel.Cells[summaryrow++, 2] = task;
+                //excel.Range[String.Concat("A", summaryrow.ToString())].Style.IndentLevel = 2;
+                ////excel.Range[String.Concat("A",summaryrow.ToString()), String.Concat("A", summaryrow.ToString())].DisplayFormat.IndentLevel = 4;
+                //excel.Cells[summaryrow++, 1] = task;
+                excel.WriteCell(task, 1, summaryrow++, 2);
             }
 
             return ++summaryrow;
@@ -338,8 +347,13 @@ namespace TMetric2Excel
 
         private string GetCellId(int row, int col)
         {
-            // this will only work to col 26: "Z" //
-            return (char)(col + 64) + row.ToString();
+            return GetColId(col) + row.ToString();
         }
+        private string GetColId(int col)
+        {
+            // this will only work to col 26: "Z" //
+            return ((char)(col + 64)).ToString();
+        }
+
     }
 }
