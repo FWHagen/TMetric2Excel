@@ -13,8 +13,10 @@
 		<VersionSuffixTest>$(Build_SourceVersion)</VersionSuffixTest>
 	</PropertyGroup>
 	<PropertyGroup>
-		<VersionPrefix>0.4.0</VersionPrefix>
+		<VersionPrefix>0.5.1</VersionPrefix>
 		<VersionSuffix Condition="'$(VersionSuffixTest)' != ''">$(VersionSuffixTest.Substring(0, 8))</VersionSuffix>
+		<SignAssembly>True</SignAssembly>
+		<AssemblyOriginatorKeyFile>D:\Development\CodeHagen\CH_net6.snk</AssemblyOriginatorKeyFile>
 	</PropertyGroup>
 
 	<ItemGroup>
